@@ -1,0 +1,6 @@
+{
+  "name": "DevOps Pipeline Migrator",
+  "description": "Convert and migrate CI/CD pipelines between Jenkins, GitLab CI/CD, GitHub Actions, AWS CodePipeline/CodeBuild, Google Cloud Build, and Azure DevOps Pipelines with automated syntax translation, environment mapping, and migration analysis.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

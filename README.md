@@ -140,12 +140,42 @@ npm start
      --set-env-vars GEMINI_API_KEY="your_api_key_here"
    ```
 
-### Docker Deployment
-Build and run using Docker:
+### 🐳 Docker Container Deployment
+
+The application includes an optimized multi-stage `Dockerfile` and `docker-compose.yml`:
+- **Lightweight multi-stage build** based on `node:20-alpine` (builder + minimal runtime).
+- **Security hardened**: runs as the unprivileged `node` user.
+- **Built-in healthcheck**: monitors `http://127.0.0.1:3000/api/health`.
+
+#### Option A: Run with Docker Compose (Recommended)
 ```bash
-docker build -t devops-pipeline-migrator .
-docker run -p 3000:3000 -e GEMINI_API_KEY="your_api_key_here" devops-pipeline-migrator
+# Start container in detached mode
+docker compose up -d
+
+# View container logs
+docker compose logs -f
+
+# Stop container
+docker compose down
 ```
+
+#### Option B: Build and Run with Docker CLI
+```bash
+# 1. Build the Docker image
+docker build -t devops-pipeline-migrator .
+
+# 2. Run container on port 3000
+docker run -d \
+  --name devops-pipeline-migrator \
+  -p 3000:3000 \
+  -e GEMINI_API_KEY="your_api_key_here" \
+  --restart unless-stopped \
+  devops-pipeline-migrator
+
+# 3. Check health status
+docker inspect --format='{{json .State.Health.Status}}' devops-pipeline-migrator
+```
+Once running, open `http://localhost:3000` in your browser.
 
 ---
 
@@ -153,10 +183,14 @@ docker run -p 3000:3000 -e GEMINI_API_KEY="your_api_key_here" devops-pipeline-mi
 
 ```
 devops-pipeline-migrator/
+├── Dockerfile                    # Multi-stage production container definition
+├── docker-compose.yml            # Docker Compose service definition
+├── .dockerignore                 # Excluded build paths for Docker daemon
 ├── .env.example                  # Environment variable configuration template
 ├── index.html                    # Application HTML entry point
 ├── metadata.json                 # AI Studio & applet metadata
 ├── package.json                  # Scripts & dependencies
+├── package-lock.json             # Pinned dependency lockfile for Docker builds
 ├── tsconfig.json                 # TypeScript compiler configuration
 ├── vite.config.ts                # Vite build and Tailwind plugins
 ├── server.ts                     # Express server & API endpoints (/api/convert, /api/validate)

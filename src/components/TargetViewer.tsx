@@ -13,6 +13,8 @@ import {
   Zap
 } from 'lucide-react';
 import { PipelineFormat, SingleConversionResult } from '../types/pipeline';
+import { AIProviderConfig } from '../types/ai';
+import { AI_PROVIDER_PRESETS } from '../data/aiConstants';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
 import { useI18n } from '../i18n/I18nContext';
 
@@ -25,6 +27,7 @@ interface TargetViewerProps {
   convertAllMode: boolean;
   isConverting: boolean;
   onConvertSingle: (format: PipelineFormat) => void;
+  aiConfig?: AIProviderConfig;
 }
 
 export const TargetViewer: React.FC<TargetViewerProps> = ({
@@ -36,9 +39,13 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
   convertAllMode,
   isConverting,
   onConvertSingle,
+  aiConfig,
 }) => {
   const { t } = useI18n();
   const [copied, setCopied] = React.useState(false);
+
+  const currentPreset = aiConfig ? AI_PROVIDER_PRESETS.find((p) => p.id === aiConfig.provider) : undefined;
+  const activeModelTag = aiConfig?.model || currentPreset?.name || 'AI';
 
   const availableTargets: PipelineFormat[] = (['jenkins', 'gitlab', 'github-actions', 'aws', 'gcp', 'azure'] as PipelineFormat[]).filter(
     (f) => f !== sourceFormat
@@ -120,11 +127,19 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
 
         {/* Action Controls */}
         <div className="flex items-center gap-1.5">
-          {activeResult?.aiPowered && (
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> {t.viewer.aiOptimized}
+          {activeResult?.aiPowered ? (
+            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1 font-mono">
+              <Sparkles className="w-3 h-3 text-indigo-400" />
+              <span>{activeModelTag}</span>
             </span>
-          )}
+          ) : activeResult ? (
+            <span
+              className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center gap-1 font-mono"
+              title={activeResult.fallbackNotice || t.viewer.astTranslated}
+            >
+              <Cpu className="w-3 h-3 text-emerald-400" /> {t.viewer.astTranslated}
+            </span>
+          ) : null}
           {activeResult?.complexityScore && (
             <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${complexityColor(activeResult.complexityScore)}`}>
               {activeResult.complexityScore} {t.viewer.complexity}
@@ -152,6 +167,14 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Fallback Notice Banner if quota reached */}
+      {activeResult?.fallbackNotice && (
+        <div className="px-4 py-1.5 bg-amber-500/10 border-b border-amber-500/20 text-[11px] text-amber-300 flex items-center gap-1.5">
+          <Zap className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+          <span>{activeResult.fallbackNotice}</span>
+        </div>
+      )}
 
       {/* Target Spec Bar */}
       <div className="px-4 py-1.5 bg-slate-900/60 border-b border-slate-800/80 flex items-center justify-between text-xs text-slate-400">

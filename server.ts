@@ -2,8 +2,10 @@ import express from 'express';
 import path from 'path';
 import { createServer as createViteServer } from 'vite';
 import dotenv from 'dotenv';
-import { convertPipelineWithGemini, fallbackConvertPipeline } from './server/converter';
+import { convertPipelineWithGemini, convertAllPipelinesWithGemini, fallbackConvertPipeline } from './server/converter';
+import { convertPipelineWithAnyAI, convertAllPipelinesWithAnyAI, testAIConnection } from './server/aiDispatcher';
 import { PipelineFormat, SingleConversionResult } from './src/types/pipeline';
+import { AIProviderConfig } from './src/types/ai';
 import { PIPELINE_TEMPLATES } from './src/data/pipelineConstants';
 
 dotenv.config();
@@ -24,7 +26,18 @@ async function startServer() {
     res.json({ templates: PIPELINE_TEMPLATES });
   });
 
-  // Convert pipeline endpoint (single or all targets)
+  // Test custom AI provider connection
+  app.post('/api/test-ai-config', async (req, res) => {
+    try {
+      const config: AIProviderConfig = req.body;
+      const result = await testAIConnection(config);
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err?.message || 'Failed to test connection' });
+    }
+  });
+
+  // Convert pipeline endpoint (single or all targets with any chosen AI provider)
   app.post('/api/convert', async (req, res) => {
     try {
       const {
@@ -33,12 +46,14 @@ async function startServer() {
         targetFormat,
         convertAll,
         options,
+        aiConfig,
       }: {
         sourceCode: string;
         sourceFormat: PipelineFormat;
         targetFormat?: PipelineFormat;
         convertAll?: boolean;
         options?: { includeComments?: boolean; targetRunner?: string; optimizeSteps?: boolean };
+        aiConfig?: AIProviderConfig;
       } = req.body;
 
       if (!sourceCode || !sourceCode.trim()) {
@@ -52,29 +67,20 @@ async function startServer() {
       const allFormats: PipelineFormat[] = ['jenkins', 'gitlab', 'github-actions', 'aws', 'gcp', 'azure'];
 
       if (convertAll) {
-        // Convert to all other 4 target formats concurrently
+        // Convert to all other target formats via batch dispatcher
         const targetFormats = allFormats.filter((f) => f !== sourceFormat);
-        const conversionPromises = targetFormats.map(async (target) => {
-          const result = await convertPipelineWithGemini(sourceCode, sourceFormat, target, options);
-          return { target, result };
-        });
-
-        const completed = await Promise.all(conversionPromises);
-        const resultsMap: Record<string, SingleConversionResult> = {};
-        completed.forEach(({ target, result }) => {
-          resultsMap[target] = result;
-        });
+        const resultsMap = await convertAllPipelinesWithAnyAI(sourceCode, sourceFormat, targetFormats, aiConfig, options);
 
         return res.json({
           sourceFormat,
           results: resultsMap,
-          convertedCount: completed.length,
+          convertedCount: Object.keys(resultsMap).length,
         });
       }
 
       // Single target conversion
       const finalTarget: PipelineFormat = targetFormat || (sourceFormat === 'jenkins' ? 'github-actions' : 'jenkins');
-      const result = await convertPipelineWithGemini(sourceCode, sourceFormat, finalTarget, options);
+      const result = await convertPipelineWithAnyAI(sourceCode, sourceFormat, finalTarget, aiConfig, options);
 
       return res.json({
         sourceFormat,

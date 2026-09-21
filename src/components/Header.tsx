@@ -6,9 +6,12 @@ import {
   Layers, 
   BookOpen, 
   Play, 
-  Loader2
+  Loader2,
+  Cpu,
 } from 'lucide-react';
 import { PipelineFormat } from '../types/pipeline';
+import { AIProviderConfig } from '../types/ai';
+import { AI_PROVIDER_PRESETS } from '../data/aiConstants';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
 import { LanguageSelector } from './LanguageSelector';
 import { useI18n } from '../i18n/I18nContext';
@@ -23,6 +26,8 @@ interface HeaderProps {
   onReset: () => void;
   onOpenTemplates: () => void;
   onOpenCheatsheet: () => void;
+  onOpenAISettings: () => void;
+  aiConfig: AIProviderConfig;
   activeTab: 'workspace' | 'cheatsheet';
   setActiveTab: (tab: 'workspace' | 'cheatsheet') => void;
 }
@@ -37,12 +42,17 @@ export const Header: React.FC<HeaderProps> = ({
   onReset,
   onOpenTemplates,
   onOpenCheatsheet,
+  onOpenAISettings,
+  aiConfig,
   activeTab,
   setActiveTab,
 }) => {
   const { t } = useI18n();
   const sourceMeta = PIPELINE_FORMATS[sourceFormat];
   const targetMeta = PIPELINE_FORMATS[targetFormat];
+
+  const currentPreset = AI_PROVIDER_PRESETS.find((p) => p.id === aiConfig.provider) || AI_PROVIDER_PRESETS[0];
+  const activeModelLabel = currentPreset.availableModels.find((m) => m.id === aiConfig.model)?.label || aiConfig.model || currentPreset.name;
 
   return (
     <header className="bg-slate-900 border-b border-slate-800 text-white sticky top-0 z-30 shadow-md">
@@ -57,9 +67,16 @@ export const Header: React.FC<HeaderProps> = ({
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
                 {t.app.title}
               </h1>
-              <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
-                <Sparkles className="w-3 h-3" /> Gemini 3.8 Flash
-              </span>
+              <button
+                id="header-active-ai-badge"
+                type="button"
+                onClick={onOpenAISettings}
+                className="text-[11px] font-semibold tracking-wider px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 hover:bg-indigo-500/30 border border-indigo-500/30 flex items-center gap-1 transition cursor-pointer"
+                title="Click to configure AI Engine & Models"
+              >
+                <Cpu className="w-3 h-3 text-indigo-400" />
+                <span className="max-w-[130px] truncate">{activeModelLabel}</span>
+              </button>
             </div>
             <p className="text-xs text-slate-400">
               {t.app.subtitle}
@@ -95,8 +112,22 @@ export const Header: React.FC<HeaderProps> = ({
           </button>
         </div>
 
-        {/* Action Controls & Language Selector */}
+        {/* Action Controls & AI Config & Language Selector */}
         <div className="flex items-center gap-2 sm:gap-3">
+          {/* AI Engine Settings Button */}
+          <button
+            id="header-ai-engine-btn"
+            onClick={onOpenAISettings}
+            className="px-3 py-2 text-xs font-medium bg-indigo-950/40 hover:bg-indigo-900/60 text-indigo-300 rounded-lg border border-indigo-700/60 transition flex items-center gap-1.5 shadow-sm"
+            title="Configure AI Model, API Keys, Local LLM & AST Engine"
+          >
+            <Cpu className="w-4 h-4 text-indigo-400" />
+            <span className="hidden sm:inline font-semibold">{t.aiSettings.engineButton}</span>
+            <span className="hidden lg:inline text-[10px] px-1 rounded bg-indigo-500/20 text-indigo-200">
+              {currentPreset.name.split(' ')[0]}
+            </span>
+          </button>
+
           {/* Templates button */}
           <button
             id="header-load-template-btn"

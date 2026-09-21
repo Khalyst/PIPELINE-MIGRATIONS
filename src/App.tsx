@@ -10,7 +10,10 @@ import { TargetViewer } from './components/TargetViewer';
 import { MigrationInsights } from './components/MigrationInsights';
 import { EnvVarCheatsheet } from './components/EnvVarCheatsheet';
 import { TemplateModal } from './components/TemplateModal';
+import { AISettingsModal } from './components/AISettingsModal';
 import { PipelineFormat, SingleConversionResult, SyntaxValidationIssue, PipelineTemplate } from './types/pipeline';
+import { AIProviderConfig } from './types/ai';
+import { loadSavedAIConfig } from './data/aiConstants';
 import { PIPELINE_TEMPLATES, PIPELINE_FORMATS } from './data/pipelineConstants';
 import { ArrowRightLeft, Sparkles, Layers, Info, CheckCircle2, AlertCircle } from 'lucide-react';
 import { useI18n } from './i18n/I18nContext';
@@ -32,6 +35,8 @@ export default function App() {
 
   const [validationIssues, setValidationIssues] = useState<SyntaxValidationIssue[]>([]);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState<boolean>(false);
+  const [isAISettingsOpen, setIsAISettingsOpen] = useState<boolean>(false);
+  const [aiConfig, setAiConfig] = useState<AIProviderConfig>(() => loadSavedAIConfig());
   const [statusMessage, setStatusMessage] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null);
 
   // Validate pipeline code on change with light debounce
@@ -60,11 +65,13 @@ export default function App() {
   }, [sourceCode, sourceFormat]);
 
   // Main conversion runner
-  const handleConvert = useCallback(async () => {
+  const handleConvert = useCallback(async (overrideConfig?: AIProviderConfig) => {
     if (!sourceCode.trim()) {
       setStatusMessage({ type: 'error', text: t.app.pleaseEnterCode });
       return;
     }
+
+    const effectiveAI = overrideConfig || aiConfig;
 
     setIsConverting(true);
     setStatusMessage(null);
@@ -78,6 +85,7 @@ export default function App() {
             sourceCode,
             sourceFormat,
             convertAll: true,
+            aiConfig: effectiveAI,
           }),
         });
 
@@ -105,6 +113,7 @@ export default function App() {
             sourceFormat,
             targetFormat,
             convertAll: false,
+            aiConfig: effectiveAI,
           }),
         });
 
@@ -129,12 +138,17 @@ export default function App() {
     } finally {
       setIsConverting(false);
     }
-  }, [sourceCode, sourceFormat, targetFormat, convertAllMode, t]);
+  }, [sourceCode, sourceFormat, targetFormat, convertAllMode, aiConfig, t]);
 
   // Convert on initial mount once so user immediately sees live conversion result
   useEffect(() => {
     handleConvert();
   }, []);
+
+  const handleSaveAIConfig = (newConfig: AIProviderConfig) => {
+    setAiConfig(newConfig);
+    handleConvert(newConfig);
+  };
 
   const handleSourceFormatChange = (newFormat: PipelineFormat) => {
     setSourceFormat(newFormat);
@@ -186,10 +200,12 @@ export default function App() {
         isConverting={isConverting}
         convertAllMode={convertAllMode}
         onToggleConvertAll={(val) => setConvertAllMode(val)}
-        onConvert={handleConvert}
+        onConvert={() => handleConvert()}
         onReset={handleReset}
         onOpenTemplates={() => setIsTemplateModalOpen(true)}
         onOpenCheatsheet={() => setActiveNavTab('cheatsheet')}
+        onOpenAISettings={() => setIsAISettingsOpen(true)}
+        aiConfig={aiConfig}
         activeTab={activeNavTab}
         setActiveTab={setActiveNavTab}
       />
@@ -270,6 +286,7 @@ export default function App() {
                 convertAllMode={convertAllMode}
                 isConverting={isConverting}
                 onConvertSingle={handleConvert}
+                aiConfig={aiConfig}
               />
             </div>
 
@@ -292,6 +309,14 @@ export default function App() {
         onClose={() => setIsTemplateModalOpen(false)}
         onSelectTemplate={handleSelectTemplate}
         currentFormat={sourceFormat}
+      />
+
+      {/* Universal AI Provider & Model Settings Modal */}
+      <AISettingsModal
+        isOpen={isAISettingsOpen}
+        onClose={() => setIsAISettingsOpen(false)}
+        config={aiConfig}
+        onSaveConfig={handleSaveAIConfig}
       />
 
       {/* Footer */}

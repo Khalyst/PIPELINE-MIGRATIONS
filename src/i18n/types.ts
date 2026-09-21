@@ -106,4 +106,25 @@ export interface TranslationDictionary {
     currentFormatMatch: string;
     close: string;
   };
+  aiSettings: {
+    engineButton: string;
+    modalTitle: string;
+    modalSubtitle: string;
+    selectProvider: string;
+    apiKeyLabel: string;
+    apiKeyHelp: string;
+    useBuiltInKey: string;
+    enterCustomKey: string;
+    modelLabel: string;
+    customModelPlaceholder: string;
+    baseUrlLabel: string;
+    testConnection: string;
+    testing: string;
+    saveConfig: string;
+    savedNotice: string;
+    resetDefaults: string;
+    temperatureLabel: string;
+    temperatureHelp: string;
+    offlineModeNotice: string;
+  };
 }

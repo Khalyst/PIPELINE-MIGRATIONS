@@ -50,6 +50,7 @@ export interface SingleConversionResult {
   stepMappings: StepMapping[];
   complexityScore: 'Low' | 'Medium' | 'High' | 'Complex';
   aiPowered: boolean;
+  fallbackNotice?: string;
 }
 
 export interface MultiConversionResponse {

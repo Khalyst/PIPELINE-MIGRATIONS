@@ -1,5 +1,6 @@
 import { GoogleGenAI, Type } from '@google/genai';
 import { PipelineFormat, SingleConversionResult } from '../src/types/pipeline';
+import { extractCleanErrorMessage } from './errorUtils';
 
 interface ConversionOptions {
   includeComments?: boolean;
@@ -201,7 +202,7 @@ export function fallbackConvertPipeline(
   };
 }
 
-function getFilenameForFormat(format: PipelineFormat): string {
+export function getFilenameForFormat(format: PipelineFormat): string {
   switch (format) {
     case 'jenkins': return 'Jenkinsfile';
     case 'gitlab': return '.gitlab-ci.yml';
@@ -538,7 +539,7 @@ function generateGitLabCI(stages: GenericStage[], env: Record<string, string>): 
   return yaml;
 }
 
-// AI-powered conversion with Gemini 3.8 Flash
+// AI-powered conversion with Gemini 3.8 Flash & automated quota-resilient fallback
 export async function convertPipelineWithGemini(
   sourceCode: string,
   sourceFormat: PipelineFormat,
@@ -548,21 +549,10 @@ export async function convertPipelineWithGemini(
   const apiKey = process.env.GEMINI_API_KEY;
 
   if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
-    // Fallback to deterministic AST converter
     return fallbackConvertPipeline(sourceCode, sourceFormat, targetFormat, options);
   }
 
-  try {
-    const ai = new GoogleGenAI({
-      apiKey,
-      httpOptions: {
-        headers: {
-          'User-Agent': 'aistudio-build',
-        },
-      },
-    });
-
-    const prompt = `You are a Senior Principal DevOps & Platform Engineer specializing in CI/CD migrations.
+  const prompt = `You are a Senior Principal DevOps & Platform Engineer specializing in CI/CD migrations.
 Convert the following ${sourceFormat.toUpperCase()} pipeline code into idiomatic, modern, production-grade ${targetFormat.toUpperCase()} pipeline format.
 
 Source Pipeline Format: ${sourceFormat}
@@ -598,95 +588,137 @@ Strict Requirements:
 
 Return a valid JSON object matching the requested schema.`;
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.8-flash',
-      contents: prompt,
-      config: {
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            convertedCode: {
-              type: Type.STRING,
-              description: 'The complete, production-ready converted pipeline file content',
+  const schemaConfig = {
+    responseMimeType: 'application/json',
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        convertedCode: {
+          type: Type.STRING,
+          description: 'The complete, production-ready converted pipeline file content',
+        },
+        filename: {
+          type: Type.STRING,
+          description: 'The standard filename for this target pipeline',
+        },
+        explanation: {
+          type: Type.STRING,
+          description: 'Clear architectural overview of what was translated and why',
+        },
+        envVarMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              sourceVar: { type: Type.STRING },
+              targetVar: { type: Type.STRING },
+              notes: { type: Type.STRING },
             },
-            filename: {
-              type: Type.STRING,
-              description: 'The standard filename for this target pipeline (e.g. Jenkinsfile, .github/workflows/pipeline.yml, buildspec.yml, cloudbuild.yaml, azure-pipelines.yml)',
-            },
-            explanation: {
-              type: Type.STRING,
-              description: 'Clear architectural overview of what was translated and why',
-            },
-            envVarMappings: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  sourceVar: { type: Type.STRING },
-                  targetVar: { type: Type.STRING },
-                  notes: { type: Type.STRING },
-                },
-                required: ['sourceVar', 'targetVar', 'notes'],
-              },
-            },
-            secretMappings: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  sourceSecret: { type: Type.STRING },
-                  targetMechanism: { type: Type.STRING },
-                  setupInstructions: { type: Type.STRING },
-                },
-                required: ['sourceSecret', 'targetMechanism', 'setupInstructions'],
-              },
-            },
-            migrationWarnings: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  level: { type: Type.STRING, description: 'info, warning, or critical' },
-                  title: { type: Type.STRING },
-                  detail: { type: Type.STRING },
-                  actionRequired: { type: Type.STRING },
-                },
-                required: ['level', 'title', 'detail', 'actionRequired'],
-              },
-            },
-            stepMappings: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  originalStep: { type: Type.STRING },
-                  convertedStep: { type: Type.STRING },
-                  targetSyntaxNotes: { type: Type.STRING },
-                },
-                required: ['originalStep', 'convertedStep', 'targetSyntaxNotes'],
-              },
-            },
-            complexityScore: {
-              type: Type.STRING,
-              description: 'Low, Medium, High, or Complex',
-            },
+            required: ['sourceVar', 'targetVar', 'notes'],
           },
-          required: [
-            'convertedCode',
-            'filename',
-            'explanation',
-            'envVarMappings',
-            'secretMappings',
-            'migrationWarnings',
-            'stepMappings',
-            'complexityScore',
-          ],
+        },
+        secretMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              sourceSecret: { type: Type.STRING },
+              targetMechanism: { type: Type.STRING },
+              setupInstructions: { type: Type.STRING },
+            },
+            required: ['sourceSecret', 'targetMechanism', 'setupInstructions'],
+          },
+        },
+        migrationWarnings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              level: { type: Type.STRING, description: 'info, warning, or critical' },
+              title: { type: Type.STRING },
+              detail: { type: Type.STRING },
+              actionRequired: { type: Type.STRING },
+            },
+            required: ['level', 'title', 'detail', 'actionRequired'],
+          },
+        },
+        stepMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              originalStep: { type: Type.STRING },
+              convertedStep: { type: Type.STRING },
+              targetSyntaxNotes: { type: Type.STRING },
+            },
+            required: ['originalStep', 'convertedStep', 'targetSyntaxNotes'],
+          },
+        },
+        complexityScore: {
+          type: Type.STRING,
+          description: 'Low, Medium, High, or Complex',
+        },
+      },
+      required: [
+        'convertedCode',
+        'filename',
+        'explanation',
+        'envVarMappings',
+        'secretMappings',
+        'migrationWarnings',
+        'stepMappings',
+        'complexityScore',
+      ],
+    },
+  };
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
         },
       },
     });
 
-    const parsed = JSON.parse(response.text || '{}');
+    let responseText = '';
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: schemaConfig,
+      });
+      responseText = response.text || '';
+    } catch (primaryErr: any) {
+      const isRateLimit =
+        primaryErr?.status === 429 ||
+        primaryErr?.message?.includes('429') ||
+        primaryErr?.message?.includes('quota') ||
+        primaryErr?.message?.includes('RESOURCE_EXHAUSTED');
+
+      if (isRateLimit) {
+        console.warn('[Gemini API] Primary model quota limit reached (429). Attempting fallback model gemini-3.1-flash-lite...');
+        try {
+          const fallbackResponse = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite',
+            contents: prompt,
+            config: schemaConfig,
+          });
+          responseText = fallbackResponse.text || '';
+        } catch (secondaryErr: any) {
+          console.warn('[Gemini API] Free tier rate limits reached on all models. Seamlessly employing high-precision AST deterministic converter.');
+          const fallback = fallbackConvertPipeline(sourceCode, sourceFormat, targetFormat, options);
+          fallback.fallbackNotice = 'Gemini free-tier quota limit reached (resets shortly). Generated via deterministic AST converter.';
+          return fallback;
+        }
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    const parsed = JSON.parse(responseText || '{}');
     return {
       targetFormat,
       filename: parsed.filename || getFilenameForFormat(targetFormat),
@@ -699,10 +731,223 @@ Return a valid JSON object matching the requested schema.`;
       complexityScore: parsed.complexityScore || 'Medium',
       aiPowered: true,
     };
-  } catch (error) {
-    console.error('Gemini API conversion error, fallback used:', error);
+  } catch (error: any) {
+    const clean = extractCleanErrorMessage(error);
+    console.log('[Gemini API] Notice: Converting via deterministic AST conversion engine:', clean.message);
     const fallback = fallbackConvertPipeline(sourceCode, sourceFormat, targetFormat, options);
-    fallback.explanation += ' (Engine fallback used)';
+    fallback.fallbackNotice = clean.message;
     return fallback;
   }
 }
+
+// AI-powered batch conversion that converts into all target formats in ONE single Gemini API call
+export async function convertAllPipelinesWithGemini(
+  sourceCode: string,
+  sourceFormat: PipelineFormat,
+  targetFormats: PipelineFormat[],
+  options?: ConversionOptions
+): Promise<Record<string, SingleConversionResult>> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  const results: Record<string, SingleConversionResult> = {};
+
+  if (!apiKey || apiKey === 'MY_GEMINI_API_KEY') {
+    targetFormats.forEach((t) => {
+      results[t] = fallbackConvertPipeline(sourceCode, sourceFormat, t, options);
+    });
+    return results;
+  }
+
+  const prompt = `You are a Senior Principal DevOps & Platform Engineer specializing in CI/CD migrations.
+Translate the following ${sourceFormat.toUpperCase()} pipeline code into multiple target formats in a single pass: ${targetFormats.map((f) => f.toUpperCase()).join(', ')}.
+
+Source Pipeline Format: ${sourceFormat}
+Target Formats: ${targetFormats.join(', ')}
+
+SOURCE CODE:
+\`\`\`
+${sourceCode}
+\`\`\`
+
+Strict Requirements:
+1. Converted code for each target must follow current official best practices:
+   - github-actions: valid .github/workflows/pipeline.yml with pinned action versions, triggers, jobs, steps.
+   - gitlab: valid .gitlab-ci.yml with stages, jobs, script, rules, artifacts.
+   - aws: valid buildspec.yml v0.2 with phases.
+   - gcp: valid cloudbuild.yaml with steps and official cloud builders.
+   - azure: valid azure-pipelines.yml with stages/jobs/steps.
+   - jenkins: valid Declarative Jenkinsfile with pipeline { agent, stages, steps }.
+2. For each target, provide envVarMappings, secretMappings, migrationWarnings, stepMappings, and complexityScore.
+3. Return a JSON object with a "conversions" object whose keys are exactly: ${targetFormats.map((t) => `"${t}"`).join(', ')}.`;
+
+  const targetProperties: Record<string, any> = {};
+  targetFormats.forEach((tf) => {
+    targetProperties[tf] = {
+      type: Type.OBJECT,
+      properties: {
+        convertedCode: { type: Type.STRING },
+        filename: { type: Type.STRING },
+        explanation: { type: Type.STRING },
+        envVarMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              sourceVar: { type: Type.STRING },
+              targetVar: { type: Type.STRING },
+              notes: { type: Type.STRING },
+            },
+            required: ['sourceVar', 'targetVar', 'notes'],
+          },
+        },
+        secretMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              sourceSecret: { type: Type.STRING },
+              targetMechanism: { type: Type.STRING },
+              setupInstructions: { type: Type.STRING },
+            },
+            required: ['sourceSecret', 'targetMechanism', 'setupInstructions'],
+          },
+        },
+        migrationWarnings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              level: { type: Type.STRING },
+              title: { type: Type.STRING },
+              detail: { type: Type.STRING },
+              actionRequired: { type: Type.STRING },
+            },
+            required: ['level', 'title', 'detail', 'actionRequired'],
+          },
+        },
+        stepMappings: {
+          type: Type.ARRAY,
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              originalStep: { type: Type.STRING },
+              convertedStep: { type: Type.STRING },
+              targetSyntaxNotes: { type: Type.STRING },
+            },
+            required: ['originalStep', 'convertedStep', 'targetSyntaxNotes'],
+          },
+        },
+        complexityScore: { type: Type.STRING },
+      },
+      required: [
+        'convertedCode',
+        'filename',
+        'explanation',
+        'envVarMappings',
+        'secretMappings',
+        'migrationWarnings',
+        'stepMappings',
+        'complexityScore',
+      ],
+    };
+  });
+
+  const schemaConfig = {
+    responseMimeType: 'application/json',
+    responseSchema: {
+      type: Type.OBJECT,
+      properties: {
+        conversions: {
+          type: Type.OBJECT,
+          properties: targetProperties,
+          required: targetFormats,
+        },
+      },
+      required: ['conversions'],
+    },
+  };
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey,
+      httpOptions: {
+        headers: {
+          'User-Agent': 'aistudio-build',
+        },
+      },
+    });
+
+    let responseText = '';
+
+    try {
+      const response = await ai.models.generateContent({
+        model: 'gemini-3.8-flash',
+        contents: prompt,
+        config: schemaConfig,
+      });
+      responseText = response.text || '';
+    } catch (primaryErr: any) {
+      const isRateLimit =
+        primaryErr?.status === 429 ||
+        primaryErr?.message?.includes('429') ||
+        primaryErr?.message?.includes('quota') ||
+        primaryErr?.message?.includes('RESOURCE_EXHAUSTED');
+
+      if (isRateLimit) {
+        console.warn('[Gemini API] Primary model quota limit reached (429) during batch migration. Trying gemini-3.1-flash-lite...');
+        try {
+          const fallbackResponse = await ai.models.generateContent({
+            model: 'gemini-3.1-flash-lite',
+            contents: prompt,
+            config: schemaConfig,
+          });
+          responseText = fallbackResponse.text || '';
+        } catch (secondaryErr: any) {
+          console.warn('[Gemini API] Rate limit reached. Seamlessly converting all targets using AST deterministic engine.');
+          targetFormats.forEach((t) => {
+            const fb = fallbackConvertPipeline(sourceCode, sourceFormat, t, options);
+            fb.fallbackNotice = 'Gemini free-tier quota limit reached. Generated via AST deterministic converter.';
+            results[t] = fb;
+          });
+          return results;
+        }
+      } else {
+        throw primaryErr;
+      }
+    }
+
+    const parsed = JSON.parse(responseText || '{}');
+    const conversions = parsed.conversions || {};
+
+    targetFormats.forEach((tf) => {
+      if (conversions[tf] && conversions[tf].convertedCode) {
+        const item = conversions[tf];
+        results[tf] = {
+          targetFormat: tf,
+          filename: item.filename || getFilenameForFormat(tf),
+          convertedCode: item.convertedCode,
+          explanation: item.explanation || '',
+          envVarMappings: item.envVarMappings || [],
+          secretMappings: item.secretMappings || [],
+          migrationWarnings: item.migrationWarnings || [],
+          stepMappings: item.stepMappings || [],
+          complexityScore: item.complexityScore || 'Medium',
+          aiPowered: true,
+        };
+      } else {
+        results[tf] = fallbackConvertPipeline(sourceCode, sourceFormat, tf, options);
+      }
+    });
+
+    return results;
+  } catch (error: any) {
+    const clean = extractCleanErrorMessage(error);
+    console.log('[Gemini API] Notice: Converting via deterministic batch conversion:', clean.message);
+    targetFormats.forEach((t) => {
+      const fb = fallbackConvertPipeline(sourceCode, sourceFormat, t, options);
+      fb.fallbackNotice = clean.message;
+      results[t] = fb;
+    });
+    return results;
+  }
+}
+

@@ -6,12 +6,12 @@ import {
   Layers, 
   BookOpen, 
   Play, 
-  RotateCcw,
-  CheckCircle2,
   Loader2
 } from 'lucide-react';
 import { PipelineFormat } from '../types/pipeline';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
+import { LanguageSelector } from './LanguageSelector';
+import { useI18n } from '../i18n/I18nContext';
 
 interface HeaderProps {
   sourceFormat: PipelineFormat;
@@ -40,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({
   activeTab,
   setActiveTab,
 }) => {
+  const { t } = useI18n();
   const sourceMeta = PIPELINE_FORMATS[sourceFormat];
   const targetMeta = PIPELINE_FORMATS[targetFormat];
 
@@ -54,14 +55,14 @@ export const Header: React.FC<HeaderProps> = ({
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-tight text-white flex items-center gap-1.5">
-                DevOps Pipeline Migrator
+                {t.app.title}
               </h1>
               <span className="text-[11px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-400 border border-blue-500/30 flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> Gemini 3.8 Flash
               </span>
             </div>
             <p className="text-xs text-slate-400">
-              Convert CI/CD between Jenkins, GitLab, GitHub Actions, AWS, GCP & Azure
+              {t.app.subtitle}
             </p>
           </div>
         </div>
@@ -78,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            Migration Studio
+            {t.nav.studio}
           </button>
           <button
             id="nav-cheatsheet-tab"
@@ -90,21 +91,21 @@ export const Header: React.FC<HeaderProps> = ({
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            DevOps Variable Matrix
+            {t.nav.matrix}
           </button>
         </div>
 
-        {/* Action Controls */}
+        {/* Action Controls & Language Selector */}
         <div className="flex items-center gap-2 sm:gap-3">
           {/* Templates button */}
           <button
             id="header-load-template-btn"
             onClick={onOpenTemplates}
             className="px-3 py-2 text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg border border-slate-700 transition flex items-center gap-1.5"
-            title="Load ready-made real world pipeline templates"
+            title={t.nav.sampleTemplates}
           >
             <FileCode2 className="w-4 h-4 text-blue-400" />
-            <span className="hidden md:inline">Sample Templates</span>
+            <span className="hidden md:inline">{t.nav.sampleTemplates}</span>
           </button>
 
           {/* Convert all mode toggle */}
@@ -116,11 +117,14 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-indigo-950/80 text-indigo-300 border-indigo-500/50'
                 : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-slate-200'
             }`}
-            title="Convert to all 4 other pipeline formats simultaneously"
+            title={t.nav.convertAll}
           >
             <div className={`w-2 h-2 rounded-full ${convertAllMode ? 'bg-indigo-400 animate-pulse' : 'bg-slate-500'}`} />
-            <span>Target: {convertAllMode ? 'All 4 Formats' : targetMeta.shortName}</span>
+            <span>{t.nav.targetLabel} {convertAllMode ? t.nav.allFormats : targetMeta.shortName}</span>
           </button>
+
+          {/* International Language Selector */}
+          <LanguageSelector />
 
           {/* Convert Primary Button */}
           <button
@@ -132,12 +136,12 @@ export const Header: React.FC<HeaderProps> = ({
             {isConverting ? (
               <>
                 <Loader2 className="w-4 h-4 animate-spin text-white" />
-                <span>Migrating...</span>
+                <span>{t.nav.migrating}</span>
               </>
             ) : (
               <>
                 <Play className="w-4 h-4 fill-current text-white" />
-                <span>Convert Pipeline</span>
+                <span>{t.nav.convertPipeline}</span>
               </>
             )}
           </button>
@@ -146,3 +150,4 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
+

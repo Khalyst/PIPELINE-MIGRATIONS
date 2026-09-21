@@ -12,8 +12,10 @@ import {
 } from 'lucide-react';
 import { COMMON_ENV_VARS, PIPELINE_FORMATS } from '../data/pipelineConstants';
 import { PipelineFormat } from '../types/pipeline';
+import { useI18n } from '../i18n/I18nContext';
 
 export const EnvVarCheatsheet: React.FC = () => {
+  const { t } = useI18n();
   const [search, setSearch] = useState('');
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -45,10 +47,10 @@ export const EnvVarCheatsheet: React.FC = () => {
           <div>
             <h2 className="text-lg font-bold text-white flex items-center gap-2">
               <BookOpen className="w-5 h-5 text-blue-400" />
-              Cross-Platform DevOps Migration Cheatsheet
+              {t.cheatsheet.title}
             </h2>
             <p className="text-xs text-slate-400 mt-1">
-              Side-by-side equivalent syntax reference across Jenkins, GitLab CI/CD, GitHub Actions, AWS CodeBuild, GCP Cloud Build, and Azure DevOps Pipelines.
+              {t.cheatsheet.subtitle}
             </p>
           </div>
 
@@ -59,7 +61,7 @@ export const EnvVarCheatsheet: React.FC = () => {
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search variables, syntax..."
+              placeholder={t.cheatsheet.searchPlaceholder}
               className="w-full bg-slate-950 border border-slate-700 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder:text-slate-500 outline-none focus:border-blue-500"
             />
           </div>
@@ -72,11 +74,11 @@ export const EnvVarCheatsheet: React.FC = () => {
           <div className="flex items-center gap-2">
             <Variable className="w-4 h-4 text-blue-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
-              Standard Built-in Environment Variables Matrix
+              {t.cheatsheet.variableConcept}
             </h3>
           </div>
           <span className="text-[11px] text-slate-500 font-mono">
-            {filteredVars.length} variables indexed
+            {filteredVars.length} {t.cheatsheet.showingResults}
           </span>
         </div>
 
@@ -84,7 +86,7 @@ export const EnvVarCheatsheet: React.FC = () => {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-800 bg-slate-950/40 text-slate-400 text-[11px]">
-                <th className="p-3 font-semibold">Concept</th>
+                <th className="p-3 font-semibold">{t.cheatsheet.variableConcept}</th>
                 <th className="p-3 font-semibold text-red-400">Jenkins</th>
                 <th className="p-3 font-semibold text-orange-400">GitLab CI</th>
                 <th className="p-3 font-semibold text-blue-400">GitHub Actions</th>
@@ -93,6 +95,7 @@ export const EnvVarCheatsheet: React.FC = () => {
                 <th className="p-3 font-semibold text-indigo-400">Azure Pipelines</th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
               {filteredVars.map((row, idx) => (
                 <tr key={idx} className="hover:bg-slate-800/30">

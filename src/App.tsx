@@ -13,8 +13,10 @@ import { TemplateModal } from './components/TemplateModal';
 import { PipelineFormat, SingleConversionResult, SyntaxValidationIssue, PipelineTemplate } from './types/pipeline';
 import { PIPELINE_TEMPLATES, PIPELINE_FORMATS } from './data/pipelineConstants';
 import { ArrowRightLeft, Sparkles, Layers, Info, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useI18n } from './i18n/I18nContext';
 
 export default function App() {
+  const { t } = useI18n();
   const defaultTemplate = PIPELINE_TEMPLATES[0]; // Jenkins Node + Docker CI/CD
 
   const [sourceFormat, setSourceFormat] = useState<PipelineFormat>('jenkins');
@@ -60,7 +62,7 @@ export default function App() {
   // Main conversion runner
   const handleConvert = useCallback(async () => {
     if (!sourceCode.trim()) {
-      setStatusMessage({ type: 'error', text: 'Please enter or paste your pipeline code to convert.' });
+      setStatusMessage({ type: 'error', text: t.app.pleaseEnterCode });
       return;
     }
 
@@ -92,7 +94,7 @@ export default function App() {
         }
         setStatusMessage({
           type: 'success',
-          text: `Successfully converted to all ${Object.keys(data.results).length} formats (${Object.keys(data.results).map(f => PIPELINE_FORMATS[f as PipelineFormat]?.shortName).join(', ')})!`,
+          text: `${t.app.convertedAllSuccess} (${Object.keys(data.results).map(f => PIPELINE_FORMATS[f as PipelineFormat]?.shortName).join(', ')})!`,
         });
       } else {
         const res = await fetch('/api/convert', {
@@ -115,19 +117,19 @@ export default function App() {
         setSingleResult(data.result);
         setStatusMessage({
           type: 'success',
-          text: `Converted to ${PIPELINE_FORMATS[targetFormat].name} (${data.result.aiPowered ? 'AI-optimized' : 'AST-translated'}).`,
+          text: `${t.app.convertedSuccess} ${PIPELINE_FORMATS[targetFormat].name} (${data.result.aiPowered ? t.viewer.aiOptimized : t.viewer.astTranslated}).`,
         });
       }
     } catch (error: any) {
       console.error('Conversion error:', error);
       setStatusMessage({
         type: 'error',
-        text: `Conversion notice: ${error.message || 'Error executing translation'}. Try again or select a sample template.`,
+        text: `${t.app.conversionFailed}: ${error.message || 'Error executing translation'}.`,
       });
     } finally {
       setIsConverting(false);
     }
-  }, [sourceCode, sourceFormat, targetFormat, convertAllMode]);
+  }, [sourceCode, sourceFormat, targetFormat, convertAllMode, t]);
 
   // Convert on initial mount once so user immediately sees live conversion result
   useEffect(() => {
@@ -161,7 +163,7 @@ export default function App() {
     setTargetFormat(alternatives[0]);
     setStatusMessage({
       type: 'info',
-      text: `Loaded template: "${template.title}". Click "Convert Pipeline" or review the code.`,
+      text: `${t.app.templateLoaded} "${template.title}".`,
     });
   };
 
@@ -219,7 +221,7 @@ export default function App() {
               onClick={() => setStatusMessage(null)}
               className="text-slate-400 hover:text-white text-xs px-2 py-0.5 rounded bg-slate-900/60"
             >
-              Dismiss
+              {t.app.dismiss}
             </button>
           </div>
         )}
@@ -230,18 +232,18 @@ export default function App() {
             {/* Quick Context Bar */}
             <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5 bg-slate-900/80 rounded-xl border border-slate-800 text-xs text-slate-400">
               <div className="flex items-center gap-2">
-                <span className="font-semibold text-slate-300">Active Migration Path:</span>
+                <span className="font-semibold text-slate-300">{t.app.activeMigrationPath}</span>
                 <span className="px-2 py-0.5 rounded font-mono font-medium bg-red-950/60 text-red-300 border border-red-800/40">
                   {PIPELINE_FORMATS[sourceFormat].name}
                 </span>
                 <ArrowRightLeft className="w-3.5 h-3.5 text-slate-500" />
                 <span className="px-2 py-0.5 rounded font-mono font-medium bg-indigo-950/60 text-indigo-300 border border-indigo-800/40">
-                  {convertAllMode ? 'All Other Cloud Platforms' : PIPELINE_FORMATS[targetFormat].name}
+                  {convertAllMode ? t.app.allOtherPlatforms : PIPELINE_FORMATS[targetFormat].name}
                 </span>
               </div>
               <div className="flex items-center gap-3 text-[11px]">
                 <span className="text-slate-400">
-                  {convertAllMode ? '⚡ Multi-Target Parallel Conversion Active' : 'Single Platform Target Mode'}
+                  {convertAllMode ? t.app.multiTargetActive : t.app.singleTargetActive}
                 </span>
               </div>
             </div>
@@ -296,10 +298,10 @@ export default function App() {
       <footer className="mt-auto border-t border-slate-800/80 bg-slate-950/80 text-slate-500 text-xs py-4 px-6">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div>
-            DevOps Pipeline Migrator • Supports Jenkins, GitLab CI, GitHub Actions, AWS CodeBuild, GCP Cloud Build, and Azure DevOps Pipelines.
+            {t.app.footerText}
           </div>
           <div className="text-[11px] text-slate-400">
-            Powered by Gemini 3.8 Flash & Deterministic DevOps AST Engines
+            {t.app.poweredBy}
           </div>
         </div>
       </footer>

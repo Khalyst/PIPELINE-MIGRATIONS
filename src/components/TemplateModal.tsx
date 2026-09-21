@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { PIPELINE_TEMPLATES, PIPELINE_FORMATS } from '../data/pipelineConstants';
 import { PipelineFormat, PipelineTemplate } from '../types/pipeline';
+import { useI18n } from '../i18n/I18nContext';
 
 interface TemplateModalProps {
   isOpen: boolean;
@@ -23,6 +24,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
   onSelectTemplate,
   currentFormat,
 }) => {
+  const { t } = useI18n();
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
 
   if (!isOpen) return null;
@@ -47,10 +49,10 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
             </div>
             <div>
               <h3 className="text-sm font-bold text-white">
-                Real-World Enterprise Pipeline Templates
+                {t.templates.title}
               </h3>
               <p className="text-xs text-slate-400">
-                Load authentic production CI/CD pipelines to test cross-platform conversion
+                {t.templates.subtitle}
               </p>
             </div>
           </div>
@@ -74,7 +76,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                   : 'bg-slate-800 text-slate-400 hover:text-slate-200'
               }`}
             >
-              {cat}
+              {cat === 'All' ? t.templates.allCategories : cat}
             </button>
           ))}
         </div>
@@ -122,7 +124,7 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
                   className="px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white shadow-sm transition shrink-0 flex items-center justify-center gap-1.5"
                 >
                   <Sparkles className="w-3.5 h-3.5" />
-                  <span>Load Template</span>
+                  <span>{t.templates.loadButton}</span>
                 </button>
               </div>
             );
@@ -131,15 +133,16 @@ export const TemplateModal: React.FC<TemplateModalProps> = ({
 
         {/* Modal Footer */}
         <div className="px-6 py-3 border-t border-slate-800 bg-slate-950 flex items-center justify-between text-xs text-slate-500">
-          <span>Templates include multi-stage build, container release, credentials bindings, and test suites.</span>
+          <span>Enterprise multi-stage templates configured with cross-platform equivalents.</span>
           <button
             onClick={onClose}
             className="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition"
           >
-            Close
+            {t.templates.close}
           </button>
         </div>
       </div>
     </div>
   );
 };
+

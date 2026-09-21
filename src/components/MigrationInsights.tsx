@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { SingleConversionResult, PipelineFormat } from '../types/pipeline';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
+import { useI18n } from '../i18n/I18nContext';
 
 interface MigrationInsightsProps {
   result: SingleConversionResult | null;
@@ -24,13 +25,14 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
   sourceFormat,
   targetFormat,
 }) => {
+  const { t } = useI18n();
   const [activeTab, setActiveTab] = useState<'vars' | 'secrets' | 'warnings' | 'steps'>('vars');
 
   if (!result) {
     return (
       <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 text-center text-slate-500">
         <p className="text-xs">
-          Run pipeline conversion to unlock deep migration diagnostics, credentials mappings, environment variables equivalence, and potential DevOps caveats.
+          {t.insights.emptyState}
         </p>
       </div>
     );
@@ -56,7 +58,7 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
             }`}
           >
             <Variable className="w-3.5 h-3.5" />
-            <span>Environment Variables ({envVarMappings.length})</span>
+            <span>{t.insights.envVarsTab} ({envVarMappings.length})</span>
           </button>
 
           <button
@@ -69,7 +71,7 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
             }`}
           >
             <KeyRound className="w-3.5 h-3.5" />
-            <span>Secrets & Auth ({secretMappings.length})</span>
+            <span>{t.insights.secretsTab} ({secretMappings.length})</span>
           </button>
 
           <button
@@ -82,7 +84,7 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
             }`}
           >
             <AlertTriangle className={`w-3.5 h-3.5 ${criticalCount > 0 ? 'text-red-400' : 'text-amber-400'}`} />
-            <span>Migration Gotchas ({warningCount})</span>
+            <span>{t.insights.warningsTab} ({warningCount})</span>
           </button>
 
           <button
@@ -95,7 +97,7 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
             }`}
           >
             <ListTree className="w-3.5 h-3.5" />
-            <span>Stage Equivalence ({stepMappings.length})</span>
+            <span>{t.insights.stepsTab} ({stepMappings.length})</span>
           </button>
         </div>
 
@@ -103,6 +105,7 @@ export const MigrationInsights: React.FC<MigrationInsightsProps> = ({
           {PIPELINE_FORMATS[sourceFormat].shortName} → {PIPELINE_FORMATS[targetFormat].shortName} Migration Analysis
         </div>
       </div>
+
 
       {/* Tab Content Area */}
       <div className="p-4 overflow-y-auto max-h-72">

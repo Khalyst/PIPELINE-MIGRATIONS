@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { PipelineFormat, SingleConversionResult } from '../types/pipeline';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
+import { useI18n } from '../i18n/I18nContext';
 
 interface TargetViewerProps {
   sourceFormat: PipelineFormat;
@@ -36,6 +37,7 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
   isConverting,
   onConvertSingle,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = React.useState(false);
 
   const availableTargets: PipelineFormat[] = (['jenkins', 'gitlab', 'github-actions', 'aws', 'gcp', 'azure'] as PipelineFormat[]).filter(
@@ -88,7 +90,7 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
       <div className="bg-slate-950 px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Target Output:
+            {t.viewer.targetPipeline}:
           </span>
           <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
             {availableTargets.map((fmt) => {
@@ -120,12 +122,12 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
         <div className="flex items-center gap-1.5">
           {activeResult?.aiPowered && (
             <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-              <Sparkles className="w-3 h-3" /> AI Migrated
+              <Sparkles className="w-3 h-3" /> {t.viewer.aiOptimized}
             </span>
           )}
           {activeResult?.complexityScore && (
             <span className={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${complexityColor(activeResult.complexityScore)}`}>
-              {activeResult.complexityScore} Complexity
+              {activeResult.complexityScore} {t.viewer.complexity}
             </span>
           )}
           <button
@@ -133,20 +135,20 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
             onClick={handleCopy}
             disabled={!convertedCode}
             className="p-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition disabled:opacity-40 flex items-center gap-1"
-            title="Copy converted pipeline code"
+            title={t.viewer.copyCode}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-            <span className="hidden sm:inline">Copy</span>
+            <span className="hidden sm:inline">{t.viewer.copyCode}</span>
           </button>
           <button
             id="target-download-btn"
             onClick={handleDownload}
             disabled={!convertedCode}
             className="p-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-800 rounded-md transition disabled:opacity-40 flex items-center gap-1"
-            title={`Download ${activeResult?.filename || meta.filename}`}
+            title={`${t.viewer.downloadFile} ${activeResult?.filename || meta.filename}`}
           >
             <Download className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Download</span>
+            <span className="hidden sm:inline">{t.viewer.downloadFile}</span>
           </button>
         </div>
       </div>
@@ -165,7 +167,7 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
         <div className="flex items-center gap-3 text-[11px]">
           {convertedCode ? (
             <>
-              <span>{lineCount} lines</span>
+              <span>{lineCount} {t.editor.lines}</span>
               <a
                 href={meta.officialDocUrl}
                 target="_blank"
@@ -177,7 +179,7 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
               </a>
             </>
           ) : (
-            <span className="text-slate-500">Waiting for conversion trigger</span>
+            <span className="text-slate-500">{t.viewer.waitingPrompt}</span>
           )}
         </div>
       </div>
@@ -204,10 +206,10 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
               <Zap className="w-6 h-6 text-indigo-400" />
             </div>
             <p className="text-sm font-medium text-slate-300 mb-1">
-              Ready to Convert to {meta.name}
+              {meta.name}
             </p>
             <p className="text-xs text-slate-400 max-w-sm mb-4">
-              Click the <strong>Convert Pipeline</strong> button in the top bar to translate your {PIPELINE_FORMATS[sourceFormat].name} into production-ready {meta.shortName} syntax.
+              {t.viewer.waitingPrompt}
             </p>
             <button
               id="empty-state-convert-btn"
@@ -216,7 +218,7 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
               className="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white shadow-sm flex items-center gap-1.5 transition"
             >
               <ArrowRight className="w-4 h-4" />
-              <span>Convert Now</span>
+              <span>{t.viewer.convertNow}</span>
             </button>
           </div>
         )}
@@ -234,3 +236,4 @@ export const TargetViewer: React.FC<TargetViewerProps> = ({
     </div>
   );
 };
+

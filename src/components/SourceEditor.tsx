@@ -7,10 +7,10 @@ import {
   AlertCircle, 
   FileText, 
   Sparkles,
-  Maximize2
 } from 'lucide-react';
 import { PipelineFormat, SyntaxValidationIssue } from '../types/pipeline';
 import { PIPELINE_FORMATS } from '../data/pipelineConstants';
+import { useI18n } from '../i18n/I18nContext';
 
 interface SourceEditorProps {
   sourceFormat: PipelineFormat;
@@ -29,6 +29,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
   validationIssues,
   onLoadTemplate,
 }) => {
+  const { t } = useI18n();
   const [copied, setCopied] = React.useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -89,7 +90,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
       <div className="bg-slate-950 px-4 py-2.5 border-b border-slate-800 flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-            Source Platform:
+            {t.editor.sourcePipeline}:
           </span>
           <div className="flex items-center gap-1 bg-slate-900 p-0.5 rounded-lg border border-slate-800">
             {formats.map((fmt) => {
@@ -126,25 +127,25 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
             id="source-upload-btn"
             onClick={() => fileInputRef.current?.click()}
             className="p-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition flex items-center gap-1"
-            title="Upload Jenkinsfile or YAML pipeline"
+            title={t.editor.uploadTooltip}
           >
             <Upload className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Upload</span>
+            <span className="hidden sm:inline">{t.editor.uploadFile}</span>
           </button>
           <button
             id="source-template-btn"
             onClick={onLoadTemplate}
             className="p-1.5 text-xs text-blue-400 hover:text-blue-300 hover:bg-slate-800 rounded-md transition flex items-center gap-1"
-            title="Load sample pipeline template"
+            title={t.editor.loadTemplatePrompt}
           >
             <Sparkles className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Samples</span>
+            <span className="hidden sm:inline">{t.nav.sampleTemplates}</span>
           </button>
           <button
             id="source-copy-btn"
             onClick={handleCopy}
             className="p-1.5 text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-md transition"
-            title="Copy source code"
+            title={t.editor.copy}
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
           </button>
@@ -152,7 +153,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
             id="source-clear-btn"
             onClick={handleClear}
             className="p-1.5 text-xs text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-md transition"
-            title="Clear source editor"
+            title={t.editor.clear}
           >
             <Trash2 className="w-3.5 h-3.5" />
           </button>
@@ -169,19 +170,19 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
           </span>
         </div>
         <div className="flex items-center gap-3 text-[11px]">
-          <span>{lineCount} lines</span>
-          <span>{code.length} chars</span>
+          <span>{lineCount} {t.editor.lines}</span>
+          <span>{code.length} {t.editor.characters}</span>
           {errorCount > 0 ? (
             <span className="text-red-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {errorCount} syntax error{errorCount > 1 ? 's' : ''}
+              <AlertCircle className="w-3 h-3" /> {errorCount} {t.editor.syntaxIssues}
             </span>
           ) : warningCount > 0 ? (
             <span className="text-amber-400 flex items-center gap-1">
-              <AlertCircle className="w-3 h-3" /> {warningCount} notice
+              <AlertCircle className="w-3 h-3" /> {warningCount} {t.editor.syntaxIssues}
             </span>
           ) : (
             <span className="text-emerald-400 flex items-center gap-1 font-mono">
-              ✓ Ready
+              ✓ {t.editor.noIssues}
             </span>
           )}
         </div>
@@ -202,7 +203,7 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
           ref={textareaRef}
           value={code}
           onChange={(e) => onChangeCode(e.target.value)}
-          placeholder={`Paste your ${meta.name} code here, or click "Samples" above to load a real-world enterprise pipeline...`}
+          placeholder={`Paste your ${meta.name} code here, or click "${t.nav.sampleTemplates}" to load a pipeline...`}
           className="flex-1 bg-transparent text-slate-100 p-3 outline-none resize-none font-mono text-xs leading-[20px] placeholder:text-slate-600 focus:ring-0 overflow-y-auto"
           spellCheck={false}
         />
@@ -235,3 +236,4 @@ export const SourceEditor: React.FC<SourceEditorProps> = ({
     </div>
   );
 };
+
